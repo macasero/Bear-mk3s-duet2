@@ -1,0 +1,17 @@
+; =========================================================================================================
+;
+; stop and restart network module
+;
+; =========================================================================================================
+;
+M552 S0                                                                ; disable network module
+G4 S5                                                                  ; wait 5 seconds
+M552 S1                                                                ; enable network module
+;
+if {network.interfaces[0].type = "wifi"}
+    M291 P"WiFi module restarted. Check console or DWC for more information."
+else
+    M291 P"Ethernet module restarted. Check console or DWC for more information."
+;
+; =========================================================================================================
+;
