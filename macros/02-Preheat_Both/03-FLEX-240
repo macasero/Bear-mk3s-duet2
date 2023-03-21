@@ -1,0 +1,21 @@
+; =========================================================================================================
+;
+;  Preheat for FLEX
+;  extruder: 240°C and bed: 50°C
+;
+; =========================================================================================================
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Heat up for FLEX at 240°C, 50°C?" S3
+;
+set global.zLiftDistance = 5                                           ; set distance to lift
+M98 P"0:/sys/00-Functions/zLift"                                       ; call macro to lift z
+;
+M568 P0 S240 R180 A2                                                   ; set current tool temperature to filament FLEX at 240°C
+;
+M140 S50                                                               ; set bed temperature to filament FLEX at 50°C
+;
+set global.waitForExtruderTemperature = true                           ; daemon beeps when temperature is reached
+set global.waitForBedTemperature = true                                ; daemon beeps when temperature is reached
+;
+; =========================================================================================================
+;

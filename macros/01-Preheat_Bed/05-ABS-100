@@ -1,0 +1,17 @@
+; =========================================================================================================
+;
+;  Preheat bed for ABS at 100°C
+;
+; =========================================================================================================
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Heat up bed for ABS at 100°C?" S3
+;
+set global.zLiftDistance = 5                                           ; set distance to lift
+M98 P"0:/sys/00-Functions/zLift"                                       ; call macro to lift z
+;
+M140 S100                                                              ; set bed temperature to filament ABS at 100°C
+;
+set global.waitForBedTemperature = true                                ; daemon beeps when temperature is reached
+;
+; =========================================================================================================
+;

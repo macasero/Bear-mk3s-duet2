@@ -1,0 +1,49 @@
+; =========================================================================================================
+;
+; test routine for Duet2 and Duet3Mini5+ WiFi/Ethernet
+; part of self tests
+;
+; check fans
+;
+; =========================================================================================================
+;
+if {state.status == "processing"} || {state.status == "paused"}        ; printer is not currently printing!
+    M291 P"Cannot run during an ongoing print. Please run this macro when the printer is not printing!" R"WARNING!" S2
+    M99
+;
+; =========================================================================================================
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Fan test" S3
+;
+if !move.axes[0].homed || !move.axes[1].homed || !move.axes[2].homed
+    G28                                                                ; home all axes without mesh bed level
+G0 X125 Y-7 Z80                                                        ; move extruder above bed
+;
+M400                                                                   ; wait for current moves to finish
+;
+; =========================================================================================================
+;
+M106 P0 S255                                                           ; set front fan to full speed
+;
+M291 P"Press OK if front fan is FULL on, else press CANCEL to exit." R"FRONT fan test" S3
+;
+M106 P0 S150                                                           ; set front fan to medium speed
+;
+M291 P"Press OK if front fan is running at MEDIUM speed, else press CANCEL to exit." R"FRONT fan test" S3
+;
+M106 P0 S0                                                             ; set front fan off
+;
+M291 P"Press OK if front fan is OFF, else press CANCEL to exit." R"FRONT fan test" S3
+;
+M106 P1 H1 T0                                                          ; set minimum temperature to 0°C so that fan should turn on, don't turn temperature control off!!!
+;
+M291 P"Press OK if left fan is FULL on, else press CANCEL to exit." R"EXTRUDER fan test" S3
+;
+M106 P1 H1 T45                                                         ; set minimun temperature back to 45°C
+;
+M291 P"Press OK if left fan is OFF, else press CANCEL to exit." R"EXTRUDER fan test" S3
+
+M291 P"all ok." R"Fan test" S2
+;
+; =========================================================================================================
+;

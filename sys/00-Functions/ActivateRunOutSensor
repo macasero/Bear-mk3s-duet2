@@ -4,8 +4,8 @@
 ;
 ; =========================================================================================================
 ;
-M98 P"0:/sys/00-Functions/TriggerOff"                                  ; turn trigger off
-M98 P"0:/sys/00-Functions/RunOutOn"                                    ; turn trigger ON
+M98 P"0:/sys/00-Functions/TriggerOff"                                  ; turn trigger OFF
+M98 P"0:/sys/00-Functions/RunOutOn"                                    ; turn run out sensor ON
 ;
 ; =========================================================================================================
 ;

@@ -1,0 +1,193 @@
+; =========================================================================================================
+;
+; test routine for Duet2 and Duet3Mini5+ WiFi/Ethernet
+; part of self tests
+;
+; macro to measure the real length of the xyz axes
+;
+; =========================================================================================================
+;
+if {state.status == "processing"} || {state.status == "paused"}        ; printer is not currently printing!
+    M291 P"Cannot run during an ongoing print. Please run this macro when the printer is not printing!" R"WARNING!" S2
+    M99
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Measure axis length (xyz)" S3
+;
+; =========================================================================================================
+;
+;  measure x axis
+;
+; =========================================================================================================
+;
+var x_ok = false
+var y_ok = false
+var z_ok = false
+;
+var x_min = move.axes[0].min
+var x_max = move.axes[0].max
+var x_length = var.x_max - var.x_min
+;
+M208 X0 S1                                                             ; set axis minimum
+M208 X260 S0                                                           ; set axis maximum
+;
+G91                                                                    ; relative positioning
+;
+M98 P"0:/sys/00-Functions/CurrentSenseHoming"                          ; ensure the current and sensitivity is set for homing routines
+;
+set global.zLiftDistance = 5                                           ; set distance to lift
+M98 P"0:/sys/00-Functions/zLift"                                       ; call macro to lift z
+;
+G4 P200                                                                ; wait 200ms
+;
+G1 H1 X5 F1000                                                         ; move slowly away
+G1 H1 X-260 F3000                                                      ; move quickly to x axis endstop and stop there (first pass)
+G1 H2 X5 F1000                                                         ; go back a few mm
+G1 H1 X-10 F3000                                                       ; move slowly to x axis endstop once more (second pass)
+;
+G1 H3 X260 F3000                                                       ; move quickly to right x axis endstop and stop there (first pass)
+;
+var measured_length = move.axes[0].min
+;
+; revert to original value
+;
+M208 X{var.x_min} S1                                                   ; set axis minimum
+M208 X{var.x_max} S0                                                   ; set axis maximum
+;
+; because of the changed offsets we have to home again
+;
+G1 H1 X-260 F3000                                                      ; move quickly to y axis endstop and stop there (first pass)
+G1 H2 X5 F1000                                                         ; go back a few mm
+G1 H1 X-10 F3000                                                       ; move slowly to x axis endstop once more (second pass)
+;
+M98 P"0:/sys/00-Functions/CurrentSenseNormal"                          ; ensure the current and sensitivity is set for normal routines.
+;
+; analyze measured value
+;
+if (var.measured_length - var.x_length) > 1
+    M291 P{"Measured x axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.x_length ^"mm."} R{"ERROR: x-axis too long." } S3
+    set var.x_ok = false
+elif (var.measured_length - var.x_length) < -1
+    M291 P{"Measured x axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.x_length ^"mm."} R{"ERROR: x-axis too short." } S3
+    set var.x_ok = false
+else
+    M291 P{"Measured x axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.x_length ^"mm."} R{"x-axis length ok." } S2
+    set var.x_ok = true
+;
+; =========================================================================================================
+;
+;  measure y axis
+;
+; =========================================================================================================
+;
+var y_min = move.axes[1].min
+var y_max = move.axes[1].max
+var y_length = var.y_max - var.y_min
+;
+M98 P"0:/sys/00-Functions/CurrentSenseHoming"                          ; ensure the current and sensitivity is set for homing routines
+;
+M208 Y0 S1                                                             ; set axis minimum
+M208 Y225 S0                                                           ; set axis minimum
+;
+G91                                                                    ; relative positioning
+;
+G1 H2 Y0.5 F10000                                                      ; energise motor to ensure it is not stalled
+M400                                                                   ; wait for current moves to finish
+G4 P200                                                                ; wait 200ms
+;
+G1 H1 Y5 F1000                                                         ; move slowly away
+G1 H1 Y-225 F3000                                                      ; move quickly to y axis endstop and stop there (first pass)
+G1 H2 Y5 F1000                                                         ; go back a few mm
+G1 H1 Y-10 F3000                                                       ; move slowly to y axis endstop once more (second pass)
+;
+G1 H3 Y225 F3000                                                       ; move quickly to right y axis endstop and stop there (first pass)
+;
+set var.measured_length = move.axes[1].min
+;
+; revert to original value
+;
+M208 Y{var.y_min} S1                                                  ; set axis minimum
+M208 Y{var.y_max} S0                                                  ; set axis maximum
+;
+; because of the changed offsets we have to home again
+;
+G1 H1 Y-225 F3000                                                      ; move quickly to y axis endstop and stop there (first pass)
+G1 H2 Y5 F1000                                                         ; go back a few mm
+G1 H1 Y-10 F3000                                                       ; move slowly to y axis endstop once more (second pass)
+;
+; analyze measured value
+;
+M98 P"0:/sys/00-Functions/CurrentSenseNormal"                          ; ensure the current and sensitivity is set for normal routines.
+;
+if (var.measured_length - var.y_length) > 1
+    M291 P{"Measured y axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.y_length ^"mm."} R{"ERROR: y-axis too long." } S3
+    set var.y_ok = false
+elif (var.measured_length - var.y_length) < -1
+    M291 P{"Measured y axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.y_length ^"mm."} R{"ERROR: y-axis too short." } S3
+    set var.y_ok = false
+else
+    M291 P{"Measured y axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.y_length ^"mm."} R{"y-axis length ok." } S2
+    set var.y_ok = true
+;
+; =========================================================================================================
+;
+;  measure z axis
+;
+; =========================================================================================================
+;
+var z_min = move.axes[2].min
+var z_max = move.axes[2].max
+var z_length = var.z_max - var.z_min
+;
+M913 X100 Y100 Z100                                                    ; set motor currents to 100%
+if !move.axes[2].homed
+    M98 P"0:/sys/homez.g"                                              ; home z axis without mesh bed level
+G90                                                                    ; absolute positioning
+G1 X125 Y55 F6000                                                      ; move extruder to the middle of the x axis
+M564 S0                                                                ; disable minimum and maximum axes limits
+G1 Z205 F6000                                                          ; move z axis just below top
+M913 Z40                                                               ; reduce z motor current to 30% of set current
+G91                                                                    ; relative positioning
+G1 H1 Z15 F300                                                         ; move z axis 15mm up slowly leveling the X gantry
+M913 Z100                                                              ; return z motor current to 100% of set current
+;
+var zmax = move.axes[2].machinePosition
+G30 S-1                                                                ; probe bed
+;
+var zmin = move.axes[2].machinePosition
+set var.measured_length = var.zmax-var.zmin + sensors.probes[0].triggerHeight
+;
+G91                                                                    ; relative positioning
+G1 H2 Z5 F6000                                                         ; lift z axis relative to current position
+G90                                                                    ; absolute positioning
+M564 S1                                                                ; enable minimum and maximum axes limits
+;
+; revert to original value
+;
+M208 Z0 S1                                                             ; set axis minimum
+M208 Z{var.z_max} S0                                                   ; set axis maximum
+;
+G30                                                                    ; probe bed
+G1 X11.5 Y4.5 Z10.0 F6000                                              ; go to first probe point
+M400                                                                   ; wait for current moves to finish
+;
+; analyze measured value
+;
+if (var.measured_length - var.z_length) > 1
+    M291 P{"Measured z axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.z_length ^"mm."} R{"ERROR: z-axis too long." } S3
+    set var.z_ok = false
+elif (var.measured_length - var.z_length) < -1
+    M291 P{"Measured z axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.z_length ^"mm."} R{"ERROR: z-axis too short." } S3
+    set var.z_ok = false
+else
+    M291 P{"Measured z axis length: " ^ var.measured_length ^ " mm, set length: " ^ var.z_length ^"mm."} R{"z-axis length ok." } S2
+    set var.z_ok = true
+;
+; =========================================================================================================
+;
+if (var.x_ok && var.y_ok && var.z_ok)
+    M291 R{"All axes have the correct length."} P{"Measure axes length"} S2
+else
+    M291 R{"ERROR: Axes have incorrect length."} P{"Measure axes length"} S2
+;
+; =========================================================================================================
+;

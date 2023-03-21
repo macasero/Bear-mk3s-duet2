@@ -1,0 +1,105 @@
+; =========================================================================================================
+;
+; test routine for Duet2 and Duet3Mini5+ WiFi/Ethernet
+; part of self tests
+;
+; test notors of all axes
+;
+; =========================================================================================================
+;
+if {state.status == "processing"} || {state.status == "paused"}        ; printer is not currently printing!
+    M291 P"Cannot run during an ongoing print. Please run this macro when the printer is not printing!" R"WARNING!" S2
+    M99
+;
+; =========================================================================================================
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Test motors" S3
+;
+G28 W
+G0 X60 Y-3 Z80
+;
+M906 X1400 Y1400 Z800 E650 I100                                        ; set motors curents with no idle current reduction
+;
+M201 X10000 Y10000 Z10000 E1000                                        ; acceleration limits (mm/s^2)
+M203 X10000 Y10000 Z10000 E1000                                        ; maximum speeds (mm/min)
+;
+; =========================================================================================================
+;
+; single axis tests
+;
+G90
+G1 X-3 Y5
+G91
+G1 H2 X245 F50000
+G1 H2 X-245 F50000
+G1 H2 X245 F50000
+G1 H2 X-245 F50000
+;
+G90
+G1 X1 Y5
+G91
+G1 H2 Y200 F50000
+G1 H2 Y-200 F50000
+G1 H2 Y200 F50000
+G1 H2 Y-200 F50000
+;
+G90
+G1 X5 Y5
+G91
+G1 H2 Z100 F1000
+G1 H2 Z-100 F1000
+G1 H2 Z100 F1000
+G1 H2 Z-100 F1000
+;
+; =========================================================================================================
+;
+; 2d tests
+;
+; rectangle
+;
+G1 X240 Y210 F50000
+G1 X-240 F50000
+G1 Y-210 F50000
+G1 X240 F50000
+G1 Y210 F50000
+G1 X0 Y0 F50000
+;
+; circle
+;
+G90
+G1 X125 Y20 Z25 F6000                                                  ; move extruder to the middle of the x axis
+G91
+G2 I5 J80
+G2 I5 J80
+;
+; =========================================================================================================
+;
+; 3d test
+;
+G90
+G1 X210 Y200 Z180 F2000
+G1 X-210 Z-120 F2000
+G1 Y-200 Z120 F2000
+G1 X220 Z-120 F2000
+G1 Y200 Z120 F2000
+G1 X-200 Z-100 F2000
+M400
+G90
+;
+; =========================================================================================================
+;
+M906 X1250 Y1250 Z650 E650 I40                                         ; set motor currents (mA) and motor idle factor in percent
+M201 X500.00 Y500.00 Z100.00 E500.00                                   ; set accelerations (mm/s^2)
+M203 X9000.00 Y9000.00 Z1000.00 E3600.00                               ; set maximum speeds (mm/min)
+;
+G1 X0 Y0 F2000
+G1 Z1 F2000
+;
+; =========================================================================================================
+;
+M98 P"0:/sys/00-Functions/CurrentSenseNormal"                          ; ensure the current and sensitivity is set for normal routines.
+;
+M291 P"all done." R"Motor test" S2
+;
+; =========================================================================================================
+;

@@ -1,0 +1,58 @@
+; =========================================================================================================
+;
+; test routine for Duet2 and Duet3Mini5+ WiFi/Ethernet
+; part of self tests
+;
+; for Caribou220 Duet2 WiFi/Ethernet Bondtech - E3d or SE Thermistor - SuperPINDA
+;
+; test homing
+;
+; =========================================================================================================
+;
+if {state.status == "processing"} || {state.status == "paused"}        ; printer is not currently printing!
+    M291 P"Cannot run during an ongoing print. Please run this macro when the printer is not printing!" R"WARNING!" S2
+    M99
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Test homing (xyz)" S3
+;
+; =========================================================================================================
+; home X Axis
+; =========================================================================================================
+;
+M98 P"0:/sys/homex.g"
+M400
+M291 P"Press OK if x axis is homed (left side), else press CANCEL to exit." R"Test homing" S3
+;
+; =========================================================================================================
+; Home Y Axis
+; =========================================================================================================
+;
+M98 P"0:/sys/homey.g"
+M400                                                                   ; wait for current moves to finish
+M291 P"Press OK if y axis is homed (bed in the back) , else press CANCEL to exit." R"Test homing" S3
+;
+; =========================================================================================================
+; home z axis
+; =========================================================================================================
+;
+G90                                                                    ; absolute positioning
+;
+G1 X11.5 Y4.5 F6000                                                    ; go to first probe point
+G91                                                                    ; relative positioning
+G1 H2 Z5 F6000                                                         ; lift z relative to current position
+G30                                                                    ; home z by probing the bed
+G1 Z0.15 F100                                                          ; move z to origin
+G91                                                                    ; relative positioning
+G1 Z1 F100                                                             ; lift z relative to current position
+G90                                                                    ; absolute positioning
+M400                                                                   ; wait for current moves to finish
+;
+M400
+M291 P"Press OK if z axis is homed, else press CANCEL to exit." R"Test homing" S3
+;
+; =========================================================================================================
+;
+M291 P"all ok." R"Homing test" S2
+;
+; =========================================================================================================
+;

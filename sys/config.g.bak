@@ -5,24 +5,32 @@
 ; for 1.8° motors on xye
 ;
 ; for Kapa Bear Duet2 Wifi - E3d Thermistor - SuperPINDA
+; Based on CariboDuetConfiguration Release : "2.1.3"
+;                           Build :   544
 ;
-; Based on CariboDuetConfiguration Release : "2.0.0"
 ; =========================================================================================================
-;
 ; global variables
 ;
 global IdleCounter = 0                                                 ; counts idle time
 global ExtruderTempActive_Old = 0                                      ; stores extruder temperature for idle check
 global BedTempActive_Old = 0                                           ; stores bed temperature for idle check
-global.OldStateStatus = 0                                              ; stores teh satus processing = 1
+global OldStateStatus = 0                                              ; stores the status of the printer, processing = 1
+global purge = 0                                                       ; stores status to purge when autoloading
+global zLiftDistance = 0                                               ; stores distance for lifting z axis
+global waitForExtruderTemperature = false                              ; beeps when pre-heat temperature is reached
+global waitForBedTemperature = false                                   ; beeps when pre-heat temperature is reached
+global AskToChange = 1                                                 ; ask if filament should be changed?
+global x_accel = 0                                                     ; stores x accelerations (mm/s^2)
+global x_jerk = 0                                                      ; stores x maximum instantaneous speed changes (mm/min)
+global y_accel = 0                                                     ; stores y accelerations (mm/s^2)
+global y_jerk = 0                                                      ; maximum y instantaneous speed changes (mm/min)
+global filamentErrorIgnore = 0                                         ; enable / disable execution of filament-error.g
+global filamentTriggerIgnore = 0                                       ; enable / disable execution of trigger2.g
 ;
 ; general settings
 ;
 M111 S0 					                                           ; debugging off
 G21 					                                               ; work in millimetres
-
-
-
 ; =========================================================================================================
 ; Network settings
 ; =========================================================================================================
@@ -44,13 +52,11 @@ M569 P1 S0                                					; Y drive @1-
 M569 P2 S1                              					; Z left drive @2- inversed
 M569 P4 S1                               					; Z right drive  @4- inversed
 M569 P3 S0                                 					; E drive @3
-
 ;
 ; Motor Configuration
 ;
 M584 X0 Y1 Z2:4 E3                     								; set drive mapping
-;M671 X-37:287 Y0:0 S10                                     			; define dual driven z-axis 
-M671 X-36.5:293.5 Y0:0 S1.00                               			; define dual driven z-axis 
+M671 X-36.5:293.5 Y0:0 S1.5                               			; define dual driven z-axis 
 ;
 ; set Microsteps and steps / mm
 ;
@@ -64,21 +70,18 @@ M84 S60                                                ; Set idle timeout
 ;
 ; set speeds
 ;
-M201 X500.00 Y500.00 Z100.00 E500.00                                   ; set accelerations (mm/s^2)
-M203 X12000.00 Y12000.00 Z1000.00 E3600.00                             ; set maximum speeds (mm/min)
-M204 P500.0 T500.0                                                     ; set print and travel accelerations (mm(s^2)
+M201 X3000.00 Y3000.00 Z100.00 E500.00                                 ; set accelerations (mm/s^2)
+M203 X18000.00 Y18000.00 Z1000.00 E3600.00                             ; set maximum speeds (mm/min)
+M204 P500.0 T500.0                                                     ; set print and travel accelerations (mm/s^2)
 M566 X480.00 Y480.00 Z48.00 E300.00                                    ; set maximum instantaneous speed changes (mm/min)
 ;
+set global.x_accel = move.axes[0].acceleration                         ; save accelerations (mm/s^2)
+set global.x_jerk = move.axes[0].jerk                                  ; save maximum instantaneous speed changes (mm/min)
 ;
-; Speed tests more aressive
-;M201 X1500.00 Y1500.00 Z100.00 E500.00                   ; set accelerations (mm/s^2)
-;M203 X9000.00 Y9000.00 Z1000.00 E3600.00               ; set maximum speeds (mm/min)
-;M204 P1200.0 T5000.0                                     ; set print and travel accelerations (mm(s^2)
-;M566 E400						;300	  ; Set maximum instantaneous speed changes (JERKS) (mm/min) ONLY EXTRUDER
-;;M566 X480.00 Y480.00 Z48.00                     ; set maximum instantaneous speed changes (mm/min)
-;M205 X8 Y8 Z8							; Set maximum instantaneous speed changes (JERKS) (mm/seg) XYZ . USE this for Marlin COMPATIBILITY
+set global.y_accel = move.axes[1].acceleration                         ; save accelerations (mm/s^2)
+set global.y_jerk = move.axes[1].jerk                                  ; save maximum instantaneous speed changes (mm/min)
 ;
-M564 H0                                                ; allow unhomed movement
+M564 H0                                                                ; allow unhomed movement
 ;
 ; =========================================================================================================
 ; Axis Limits
@@ -101,9 +104,9 @@ M574 Z2 S3                                             ; configure sensorless en
 ; SuperPINDA 
 ;
 M558 P5 C"zstop" H2 F600 T8000 A3 S0.03              ; set z probe to SuperPINDA H1.5
-G31 K0 P1000 X23 Y5 Z2.05
-;M557 X23:235 Y5:186 S30.25:30                               ; define mesh grid
 M557 X23:225 Y3.5:210 P6; P4                              ; define mesh grid (P4 for nylock mod mesh)
+;M557 X23:235 Y5:186 S30.25:30                                          ; define mesh grid
+G31 K0 P1000 X23 Y5 Z2.05
 ;
 ; =========================================================================================================
 ;
@@ -120,7 +123,7 @@ M915 Z S0 F0 H200 R0                                   ; set Z axis Sensitivity
 ; heated bed
 ; =========================================================================================================
 ;
-M308 S0 P"bedtemp" Y"thermistor" T100000 B4138 R4700 A"Bed"  ; configure sensor 0 as thermistor on pin bedtemp
+M308 S0 P"bedtemp" Y"thermistor" T100000 B4138 A"Bed" R4700 ; configure sensor 0 as thermistor on pin bedtemp
 M950 H0 C"bedheat" Q50 T0                                    ; create bed heater output on bedheat and map it to sensor 0
 M140 H0                                                      ; map heated bed to heater 0
 M143 H0 P0 S120 A2                                      ; disable temporarily H0 if temp exceeds 120C
@@ -134,7 +137,7 @@ M307 H0 R0.283 K0.295:0.000 D9.35 E1.35 S1.00 B00      ; PID backup
 ;
 ; Hotend (V6 with E3d Thermistor) 
 ;
-M308 S1 P"e0temp" Y"thermistor" T100000 B4725 C7.060000e-8 A"Nozzle E1"  ; E3d configure sensor 0 as thermistor on pin e0temp
+M308 S1 P"e0temp" Y"thermistor" T100000 B4725 C7.060000e-8 A"Nozzle E0" R4700 ; E3d configure sensor 0 as thermistor on pin e0temp
 M950 H1 C"e0heat" T1                                        ; create nozzle heater output on e0heat and map it to sensor 2
 M143 H1 S285 A2                                         ; disable temporarily H1 if temp exceeds 285C
 M143 H1 S295 A0                                         ; heater fault H1 if temp exceeds 295C
@@ -185,7 +188,7 @@ M501                                                   ; use config-override (fo
 G90                                                    ; send absolute coordinates...
 M83                                                    ; ... but relative extruder moves
 T0                                                     ; Select first tool (Extruder 0)
-M911 S23 R24 P"M913 X0 Y0 G91 M83 G1 Z3 E-5 F1000"      ; set voltage thresholds and actions to run on power loss
+M911 S22 R24 P"M913 X0 Y0 G91 M83 G1 Z3 E-5 F1000"      ; set voltage thresholds and actions to run on power loss
 ;M579 X1.005 Y1.005                                      ; Scale Cartesian axe
 ;
 ; =========================================================================================================
@@ -195,11 +198,11 @@ M911 S23 R24 P"M913 X0 Y0 G91 M83 G1 Z3 E-5 F1000"      ; set voltage thresholds
 ;
 M207 S0.85 R0 F2400 Z0								; Firmware retraction
 ;
-; execute macros that has the status of the filament sensor
+; execute macros that determine the status of the filament sensor
 ;
 M98 P"0:/sys/00-Functions/FilamentsensorStatus"
 M572 D0 S0.04                       ; set pressure advance in case not loaded on M703 Filament
-M404 N1.75									; Define filament diameter for print monitor
+;M404 N1.75									; Define filament diameter for print monitor
 ;
 ; =========================================================================================================
 ;
@@ -210,14 +213,3 @@ M404 N1.75									; Define filament diameter for print monitor
 G31 P1000 X23 Y5
 ;
 ; =========================================================================================================
-;
-; =========================================================================================================
-;
-; global varibales
-;
-global IdleCounter = 0
-global ExtruderTempActive_Old = 0
-global BedTempActive_Old = 0
-;
-; =========================================================================================================
-;

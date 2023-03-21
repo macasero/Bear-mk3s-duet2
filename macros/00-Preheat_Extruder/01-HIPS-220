@@ -1,0 +1,19 @@
+; =========================================================================================================
+;
+;  Preheat extruder for HIPS at 220°C
+;
+; =========================================================================================================
+;
+M291 P"Press OK to continue or CANCEL to abort." R"Heat up extruder for HIPS at 220°C?" S3
+;
+T0                                                                     ; select tool
+;
+set global.zLiftDistance = 5                                           ; set distance to lift
+M98 P"0:/sys/00-Functions/zLift"                                       ; call macro to lift z
+;
+M568 P0 S220 R160 A2                                                   ; set current tool temperature to filament HIPS at 220°C
+;
+set global.waitForExtruderTemperature = true                           ; daemon beeps when temperature is reached
+;
+; =========================================================================================================
+;
